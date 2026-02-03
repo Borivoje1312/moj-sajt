@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unos podataka</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f4f4f9;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .container {
+      display: flex;
+      gap: 40px;
+      max-width: 900px;
+    }
+    form {
+      background: #fff;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      width: 700px;
+      box-sizing: border-box;
+    }
+    input[type="text"], input[type="date"], input[type="time"], textarea {
+      padding: 8px;
+      margin: 6px 0 12px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-family: Arial, sans-serif;
+    }
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2c7ef7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #1a5edb;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+      max-width: 400px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    li {
+      background: white;
+      margin-bottom: 10px;
+      padding: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Unos i ispis podataka</h1>
+  <div class="container">
+    <!-- Forma za unos -->
+    <form id="podaciForm">
+      <h2>Unos podataka</h2>
+      <label>Naziv:<br />
+        <input type="text" id="naziv" required />
+      </label><br />
+      <label>Tip:<br />
+        <input type="text" id="tip" required />
+      </label><br />
+      <label>Opis:<br />
+        <textarea id="opis" required></textarea>
+      </label><br />
+      <label>Datum:<br />
+        <input type="date" id="datum" required />
+      </label><br />
+      <label>Vreme:<br />
+        <input type="time" id="vreme" required />
+      </label><br />
+      <button type="submit">Sačuvaj</button>
+    </form>
+
+    <form id="filterForm">
+  <h2>Filtriraj po tipu</h2>
+  <label>Odaberi tip:<br />
+    <select id="filterTip">
+      <option value="">sve</option>
+     
+      <!-- Dodaj sve opcije za tipove koje želiš filtrirati -->
+    </select>
+    </label><br>
+    <button type="submit">Filtriraj</button>
+    </form>
+
+    <!-- Forma za ispis i brisanje -->
+    <form id="ispisForm">
+      <h2>Ispis unetih podataka</h2>
+      <div class="buttons">
+        <button type="submit">Prikaži podatke</button>
+        <button type="button" id="obrisiBtn" style="background-color:#e74c3c;">Obriši sve</button>
+      </div>
+      <ul id="listaPodataka"></ul>
+    </form>
+  </div>
+
+<script type="text/javascript">
+const API_URL = "podaci.php";
+
+// Funkcija za učitavanje tipova iz baze i popunjavanje opcija u selektoru
+async function ucitajTipove() {
+  const res = await fetch(API_URL);
+  const podaci = await res.json();
+
+  const tipSelect = document.getElementById('filterTip');
+  // Dodajemo podrazumevanu opciju za odabir
+  tipSelect.innerHTML = '<option value="">sve</option>';
+
+  // Kreiraj jedinstvene opcije za tipove
+  const tipovi = new Set();
+  podaci.forEach(item => {
+    if (item.tip) {
+      tipovi.add(item.tip);
+    }
+  });
+
+  // Dodaj tipove u select
+  tipovi.forEach(tip => {
+    const option = document.createElement('option');
+    option.value = tip;
+    option.textContent = tip;
+    tipSelect.appendChild(option);
+  });
+}
+
+// Filtriranje podataka po tipu
+document.getElementById('filterForm').addEventListener('submit', async function(event) {
+  event.preventDefault();
+
+  const selectedTip = document.getElementById('filterTip').value;
+  prikaziPodatke(selectedTip); // Prosledi tip kao parametar funkciji
+});
+
+// Modifikovana funkcija za prikaz podataka (sa opcijom za filtriranje po tipu)
+async function prikaziPodatke(tip = '') {
+  const lista = document.getElementById('listaPodataka');
+  lista.innerHTML = '';
+
+  // Ako je tip odabran, prosledi ga kao parametar u URL
+  const url = tip ? `${API_URL}?tip=${tip}` : API_URL; // Ako je tip odabran, filtriraj podatke
+  const res = await fetch(url);
+  const podaci = await res.json();
+
+  if (podaci.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'Nema unetih podataka.';
+    lista.appendChild(li);
+    return;
+  }
+
+  podaci.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent =
+      `Naziv: ${item.naziv}\n` +
+      `Tip: ${item.tip}\n` +
+      `Opis: ${item.opis}\n` +
+      `Datum: ${item.datum}\n` +
+      `Vreme: ${item.vreme}\n` +
+      `Status: ${item.status}`;
+    lista.appendChild(li);
+  });
+}
+
+// Slanje podataka (POST)
+document.getElementById('podaciForm').addEventListener('submit', async function(event) {
+  event.preventDefault();
+
+  const naziv = document.getElementById('naziv').value.trim();
+  const tip = document.getElementById('tip').value.trim();
+  const opis = document.getElementById('opis').value.trim();
+  const datum = document.getElementById('datum').value;
+  const vreme = document.getElementById('vreme').value;
+
+  if (!naziv || !tip || !opis || !datum || !vreme) {
+    alert('Molimo popunite sva polja.');
+    return;
+  }
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ naziv, tip, opis, datum, vreme })
+  });
+
+  const result = await res.json();
+  alert(result.message || result.error);
+  this.reset();
+ 
+  // Nakon unosa, ponovo učitaj tipove i prikazuj podatke
+  ucitajTipove();
+  prikaziPodatke();
+});
+
+// Ispis podataka
+document.getElementById('ispisForm').addEventListener('submit', function(event) {
+  event.preventDefault();
+  prikaziPodatke(); // Ispis svih podataka
+});
+
+// Brisanje svih podataka
+document.getElementById('obrisiBtn').addEventListener('click', async function() {
+  if (confirm('Da li ste sigurni da želite da obrišete sve podatke?')) {
+    await fetch(API_URL, { method: "DELETE" });
+    prikaziPodatke(); // Osvežavanje prikaza podataka nakon brisanja
+  }
+});
+
+// Automatski poziv za učitavanje tipova i podataka prilikom učitavanja stranice
+window.onload = function() {
+  ucitajTipove();  // Učitaj tipove u padajući meni
+  prikaziPodatke(); // Prikaz svih podataka pri učitavanju stranice
+};
+
+
+  </script>
+</body>
+</html>
